@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="JavaScript">
+
+<head>
+    <title>ASPX Dependency Graph By Folder</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <script src="helpers\xlsxHelperFunctions.js"></script>
+    <script src="helpers\extractContentHelper.js"></script>
+</head>
+
+<body>
+    <input type="file" id="fileInputAspx" accept=".aspx" />
+    <button id="generateExcel">Generate Excel</button>
+    <script>
+        let aspxContent = '';
+        let aspxFileName= '';
+
+        // Read the content of the uploaded file
+        function readFile(fileInput, callback) {
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                callback(e.target.result);
+            };
+            reader.readAsText(file);
+            aspxFileName = file.name;
+        }
+
+        document.getElementById('fileInputAspx').addEventListener('change', function () {
+            readFile(this, function (content) {
+                aspxContent = content;
+            });
+        });
+
+        // Generate Excel using the xlsx library
+        function generateExcel(jsFiles, ascxFiles) {
+            // Initialize the worksheet data starting with headers
+            const worksheetData = [
+                [{ v: 'ASPX File', s: { font: { bold: true } } }, { v: 'JavaScript Files', s: { font: { bold: true } } }, { v: 'ASCX Files', s: { font: { bold: true } } }]
+            ];
+
+            // Add data row by row
+            const maxLength = Math.max(jsFiles.length, ascxFiles.length); // Ensure both columns have equal rows
+            for (let i = 0; i < maxLength; i++) {
+                worksheetData.push([i === 0 ? aspxFileName : '', jsFiles[i] || '', ascxFiles[i] || '']); // Fill empty cells with '' 
+            }
+
+            // Create the workbook and worksheet
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+
+            // Apply header styling
+            // styleHeaders(ws);
+
+            // Adjust columns to fit content
+            fitToColumn(ws, worksheetData);
+
+             // Merge ASPX file name cells
+            mergeAspxCells(ws);
+
+            // Append the sheet and save the Excel file
+            XLSX.utils.book_append_sheet(wb, ws, "ASPX Dependencies");
+            XLSX.writeFile(wb, "DependencyGraph.xlsx");
+        }
+
+        // Handle the generation of the Excel file on button click
+        document.getElementById('generateExcel').addEventListener('click', function () {
+            if (aspxContent === '') {
+                alert("Please upload an ASPX file first.");
+                return;
+            }
+
+            // Extract data from the aspx content
+            const jsFiles = extractJavaScriptImports(aspxContent);
+            const ascxControls = extractASCXControls(aspxContent);
+            // const ascxUsage = extractASCXUsage(aspxContent);
+
+            // Generate the Excel file with the extracted data
+            generateExcel(jsFiles, ascxControls);
+        });
+    </script>
+</body>
+
+</html>
